@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  StelligentU Lab 12.1.1 CodePipeline
+  Create a KMS Key and alias, create an S3 bucket
+  with the KMS key used for bucket encryption to
+  hold artifacts, create a CodePipeline.
+
+Parameters:
+  BranchName:
+    Description: "Repository branch to deploy"
+    Type: String
+    Default: "main"
+  CredentialsArn:
+    Description: "ARN of credentials used for access to repository"
+    Type: String
+    Default: "dummy::ARN"
+  CurrentUserName:
+    Description: "Current user's Name"
+    Type: String
+    Default: "dummy::ARN"
+  ProjectName:
+    Description: "Project name same as repository"
+    Type: String
+    Default: "some-project"
+  RandomId:
+    Description: "Random identifier"
+    Type: String
+    Default: "123456789abcdefg"
+  RepositoryId:
+    Description: "The full name of the repository"
+    Type: String
+    Default: "owner/project"
+
+Resources:
+  KMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      EnableKeyRotation: true
+      MultiRegion: false
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "Enable IAM root admin permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: "Enable IAM User Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:user/${CurrentUserName}"
+            Action:
+              - "kms:CreateAlias"
+              - "kms:CreateKey"
+              - "kms:DeleteAlias"
+              - "kms:Describe*"
+              - "kms:GenerateRandom"
+              - "kms:Get*"
+              - "kms:List*"
+              - "kms:TagResource"
+              - "kms:UntagResource"
+              - "iam:ListGroups"
+              - "iam:ListRoles"
+              - "iam:ListUsers"
+            Resource: "*"
+  KMSAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Sub "alias/code-pipeline-${RandomId}"
+      TargetKeyId: !Ref KMSKey
+
+  ArtifactStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "code-artifact-${RandomId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref KMSKey
+              SSEAlgorithm: 'aws:kms'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: "Owner"
+          Value: !Ref CurrentUserName
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: code-pipeline
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - cloudwatch:*
+                  - cloudformation:*
+                  - iam:PassRole
+                  - codebuild:*
+                  - codestar-connections:*
+                Resource: "*"
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStores:
+        - ArtifactStore:
+            Location: !Ref ArtifactStore
+            Type: S3
+          Region: !Ref AWS::Region
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      RestartExecutionOnUpdate: true
+      Stages:
+        - Name: "Source"
+          Actions:
+            - Name: SourceCode
+              Namespace: "SourceVariables"
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: 1
+              Configuration:
+                BranchName: !Ref BranchName
+                FullRepositoryId: !Ref RepositoryId
+                ConnectionArn: !Ref CredentialsArn
+              OutputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+        - Name: "Deploy-Pipeline"
+          Actions:
+            - Name: "Deploy-CodePipeline"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: "CAPABILITY_NAMED_IAM"
+                StackName: !Sub "${ProjectName}-pipeline-${BranchName}"
+                TemplatePath: !Sub "${ProjectName}::infra/bootstrap.yml"
+                # TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"
+                RoleArn: !GetAtt DeployRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "BranchName": "${BranchName}",
+                    "CredentialsArn": "${CredentialsArn}",
+                    "CurrentUserName": "${CurrentUserName}",
+                    "ProjectName": "${ProjectName}",
+                    "RandomId": "${RandomId}",
+                    "RepositoryId": "${RepositoryId}"
+                  }
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+
+Outputs:
+  KeyID:
+    Description: KMS Key ID
+    Value: !Ref KMSKey
+  KeyAlias:
+    Description: KMS Key Alias
+    Value: !Ref KMSAlias
+  ArtifactBucket:
+    Description: S3 bucket where build artifacts are stored
+    Value: !Ref ArtifactStore
