@@ -198,7 +198,7 @@ Resources:
                     "CredentialsArn": "${CredentialsArn}",
                     "ProjectName": "${ProjectName}",
                     "RepositoryId": "${RepositoryId}",
-                    "WebsiteBucketName": "{ProjectName}-bucket-${BranchName}"
+                    "WebsiteBucketName": "${ProjectName}-bucket-${BranchName}"
                   }
               InputArtifacts:
                 - Name: !Ref ProjectName
