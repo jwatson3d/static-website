@@ -23,10 +23,6 @@ Parameters:
     Description: "Project name same as repository"
     Type: String
     Default: "some-project"
-  RandomId:
-    Description: "Random identifier"
-    Type: String
-    Default: "123456789abcdefg"
   RepositoryId:
     Description: "The full name of the repository"
     Type: String
@@ -68,13 +64,13 @@ Resources:
   KMSAlias:
     Type: "AWS::KMS::Alias"
     Properties:
-      AliasName: !Sub "alias/code-pipeline-${RandomId}"
+      AliasName: !Sub "alias/code-pipeline-${ProjectName}"
       TargetKeyId: !Ref KMSKey
 
   ArtifactStore:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "code-artifact-${RandomId}"
+      BucketName: !Sub "code-artifact-${ProjectName}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -196,11 +192,11 @@ Resources:
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
                   {
+                    "ArtifactBucketName": "code-artifact-${ProjectName}",
                     "BranchName": "${BranchName}",
                     "CredentialsArn": "${CredentialsArn}",
                     "CurrentUserName": "${CurrentUserName}",
                     "ProjectName": "${ProjectName}",
-                    "RandomId": "${RandomId}",
                     "RepositoryId": "${RepositoryId}",
                     "WebsiteBucketName": "{ProjectName}-bucket-${BranchName}"
                   }

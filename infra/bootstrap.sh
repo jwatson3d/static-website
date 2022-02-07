@@ -31,7 +31,6 @@ STACK_ID=$(aws cloudformation create-stack \
       ParameterKey=CredentialsArn,ParameterValue=$CREDENTIALS_ARN \
       ParameterKey=CurrentUserName,ParameterValue=$OWNER_NAME \
       ParameterKey=ProjectName,ParameterValue=$PROJECT_NAME \
-      ParameterKey=RandomId,ParameterValue=$RANDOM_ID \
       ParameterKey=RepositoryId,ParameterValue=$REPOSITORY_ID &)
 
 # obtain the stack ID just created
