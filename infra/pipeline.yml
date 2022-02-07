@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  StelligentU Lab 12.1.1 CodePipeline
+  Deploy a static website to an S3 bucket.
+
+Parameters:
+  ArtifactBucketName:
+    Type: String
+    Description: S3 bucket name for pipeline artifacts
+  BranchName:
+    Description: "Repository branch to deploy"
+    Type: String
+    Default: "main"
+  CodePipelineRoleArn:
+    Description: "ARN of the role for the pipeline to use"
+    Type: String
+    Default: "dummy::ARN"
+  CredentialsArn:
+    Description: "ARN of credentials used for access to repository"
+    Type: String
+    Default: "dummy::ARN"
+  ProjectName:
+    Description: "Project name same as repository"
+    Type: String
+    Default: "some-project"
+  RepositoryId:
+    Description: "The full name of the repository"
+    Type: String
+    Default: "owner/project"
+  WebsiteBucketName:
+    Type: String
+    Description: S3 bucket name for website artifacts
+
+Resources:
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStores:
+        - ArtifactStore:
+            Location: !Ref ArtifactBucketName
+            Type: S3
+          Region: !Ref AWS::Region
+      RoleArn: !Ref CodePipelineRoleArn
+      RestartExecutionOnUpdate: true
+      Stages:
+        - Name: "Source"
+          Actions:
+            - Name: SourceCode
+              Namespace: "SourceVariables"
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: 1
+              Configuration:
+                BranchName: !Ref BranchName
+                FullRepositoryId: !Ref RepositoryId
+                ConnectionArn: !Ref CredentialsArn
+              OutputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+        - Name: "Deploy"
+          Actions:
+            - Name: "Deploy"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: S3
+                Version: 1
+              Configuration:
+                BucketName: !Ref WebsiteBucketName
+                Extract: 'true'
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1

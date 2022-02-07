@@ -11,10 +11,9 @@ USER_NAME=$(sed -e "s/_/-/g" <<<$OWNER_NAME)
 STACK_NAME=$USER_NAME-$RANDOM_ID
 
 # obtain source repository information (https://github.com/james-turner/github-to-ci-in-5-minutes/blob/master/bootstrap.sh)
-#SOURCE_TYPE=$(git remote -v | grep push | cut -d ':' -f1 | cut -d '@' -f2 | cut -d '.' -f1)
+SOURCE_TYPE=$(git remote -v | grep push | cut -d ':' -f1 | cut -d '@' -f2 | cut -d '.' -f1)
 #SOURCE_TYPE=$(tr '[:lower:]' '[:upper:]' <<< ${SOURCE_TYPE:0:1})${SOURCE_TYPE:1}
-# above two lines generate 'Github' while codestar-connections requires 'GitHub'
-SOURCE_TYPE=GitHub
+SOURCE_TYPE="${${SOURCE_TYPE}/github/GitHub}"
 CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter $SOURCE_TYPE --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
 BRANCH=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 PROJECT_NAME=$(basename `pwd`)
@@ -25,7 +24,7 @@ REPOSITORY_ID=$REPOSITORY_OWNER/$PROJECT_NAME
 echo "Creating CloudFormation stack $STACK_NAME"
 STACK_ID=$(aws cloudformation create-stack \
   --stack-name "$STACK_NAME" \
-  --template-body file://bootstrap.yml \
+  --template-body file://infra/bootstrap.yml \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameters ParameterKey=BranchName,ParameterValue=$BRANCH \
       ParameterKey=CredentialsArn,ParameterValue=$CREDENTIALS_ARN \

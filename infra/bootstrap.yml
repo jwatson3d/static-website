@@ -3,7 +3,8 @@ Description: >
   StelligentU Lab 12.1.1 CodePipeline
   Create a KMS Key and alias, create an S3 bucket
   with the KMS key used for bucket encryption to
-  hold artifacts, create a CodePipeline.
+  hold artifacts, create a CodePipeline for the
+  current static website project and branch.
 
 Parameters:
   BranchName:
@@ -86,9 +87,6 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-      Tags:
-        - Key: "Owner"
-          Value: !Ref CurrentUserName
 
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -159,6 +157,28 @@ Resources:
               OutputArtifacts:
                 - Name: !Ref ProjectName
               RunOrder: 1
+        - Name: "Deploy-Bucket"
+          Actions:
+            - Name: "Deploy-Bucket"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: "CAPABILITY_NAMED_IAM"
+                StackName: !Sub "${ProjectName}-bucket-${BranchName}"
+                TemplatePath: !Sub "${ProjectName}::infra/bucket.yml"
+                # TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"
+                RoleArn: !GetAtt DeployRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "BucketNameParameter": "{ProjectName}-bucket-${BranchName}"
+                  }
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
         - Name: "Deploy-Pipeline"
           Actions:
             - Name: "Deploy-CodePipeline"
@@ -171,7 +191,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: "CAPABILITY_NAMED_IAM"
                 StackName: !Sub "${ProjectName}-pipeline-${BranchName}"
-                TemplatePath: !Sub "${ProjectName}::infra/bootstrap.yml"
+                TemplatePath: !Sub "${ProjectName}::infra/pipeline.yml"
                 # TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
@@ -181,7 +201,8 @@ Resources:
                     "CurrentUserName": "${CurrentUserName}",
                     "ProjectName": "${ProjectName}",
                     "RandomId": "${RandomId}",
-                    "RepositoryId": "${RepositoryId}"
+                    "RepositoryId": "${RepositoryId}",
+                    "WebsiteBucketName": "{ProjectName}-bucket-${BranchName}"
                   }
               InputArtifacts:
                 - Name: !Ref ProjectName
