@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# generate random identifier
-RANDOM_ID=$(dd if=/dev/random bs=8 count=1 2>/dev/null | od -An -tx1 | tr -d ' \t\n')
-
 # obtain current user name
 OWNER_NAME=$(aws sts get-caller-identity | jq -r ".Arn" | cut -d'/' -f2)
 USER_NAME=$(sed -e "s/_/-/g" <<<$OWNER_NAME)
-
-# create a unique stack name
-STACK_NAME=$USER_NAME-$RANDOM_ID
 
 # obtain source repository information (https://github.com/james-turner/github-to-ci-in-5-minutes/blob/master/bootstrap.sh)
 SOURCE_TYPE=$(git remote -v | grep push | cut -d ':' -f1 | cut -d '@' -f2 | cut -d '.' -f1)
@@ -20,6 +14,9 @@ BRANCH=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\
 PROJECT_NAME=$(basename `pwd`)
 REPOSITORY_OWNER=$(git remote -v | grep push | cut -d ':' -f2 | cut -d '/' -f1)
 REPOSITORY_ID=$REPOSITORY_OWNER/$PROJECT_NAME
+
+# create a unique stack name
+STACK_NAME=$PROJECT_NAME-$BRANCH-bootstrap
 
 # create the stack using these random names
 echo "Creating CloudFormation stack $STACK_NAME"
