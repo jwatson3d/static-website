@@ -55,15 +55,15 @@ export KEY_ALIAS
 export BUCKET_NAME
 
 # pause to allow inspection
-echo "Press any key to continue"
-while [ true ] ; do
-  read -t 5 -n 1
-  if [ $? = 0 ] ; then
-    break ;
-  else
-    echo "waiting for the keypress"
-  fi
-done
+# echo "Press any key to continue"
+# while [ true ] ; do
+#   read -t 5 -n 1
+#   if [ $? = 0 ] ; then
+#     break ;
+#   else
+#     echo "waiting for the keypress"
+#   fi
+# done
 
 # remove the stack
 #aws cloudformation delete-stack --stack-name "$STACK_NAME"
