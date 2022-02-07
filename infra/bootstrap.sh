@@ -13,7 +13,8 @@ STACK_NAME=$USER_NAME-$RANDOM_ID
 # obtain source repository information (https://github.com/james-turner/github-to-ci-in-5-minutes/blob/master/bootstrap.sh)
 SOURCE_TYPE=$(git remote -v | grep push | cut -d ':' -f1 | cut -d '@' -f2 | cut -d '.' -f1)
 #SOURCE_TYPE=$(tr '[:lower:]' '[:upper:]' <<< ${SOURCE_TYPE:0:1})${SOURCE_TYPE:1}
-SOURCE_TYPE="${${SOURCE_TYPE}/github/GitHub}"
+#SOURCE_TYPE="${${SOURCE_TYPE}/github/GitHub}"
+SOURCE_TYPE=GitHub
 CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter $SOURCE_TYPE --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
 BRANCH=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 PROJECT_NAME=$(basename `pwd`)
