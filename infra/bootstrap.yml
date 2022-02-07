@@ -194,8 +194,8 @@ Resources:
                   {
                     "ArtifactBucketName": "code-artifact-${ProjectName}",
                     "BranchName": "${BranchName}",
+                    "CodePipelineRoleArn": "${CodePipelineRole.Arn}",
                     "CredentialsArn": "${CredentialsArn}",
-                    "CurrentUserName": "${CurrentUserName}",
                     "ProjectName": "${ProjectName}",
                     "RepositoryId": "${RepositoryId}",
                     "WebsiteBucketName": "{ProjectName}-bucket-${BranchName}"
