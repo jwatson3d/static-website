@@ -192,7 +192,7 @@ Resources:
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
                   {
-                    "ArtifactBucketName": "${ProjectName}-${BranchName}-cade-artifacts",
+                    "ArtifactBucketName": "${ProjectName}-${BranchName}-code-artifacts",
                     "BranchName": "${BranchName}",
                     "CodePipelineRoleArn": "${CodePipelineRole.Arn}",
                     "CredentialsArn": "${CredentialsArn}",
